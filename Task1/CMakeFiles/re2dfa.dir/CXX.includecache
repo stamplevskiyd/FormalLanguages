@@ -1,0 +1,30 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/dmitry/Documents/FormalLanguages/Task1/api.hpp
+string
+-
+set
+-
+
+/home/dmitry/Documents/FormalLanguages/Task1/main.cpp
+api.hpp
+/home/dmitry/Documents/FormalLanguages/Task1/api.hpp
+iostream
+-
+fstream
+-
+string
+-
+
+/home/dmitry/Documents/FormalLanguages/Task1/task.cpp
+api.hpp
+/home/dmitry/Documents/FormalLanguages/Task1/api.hpp
+string
+-
+
