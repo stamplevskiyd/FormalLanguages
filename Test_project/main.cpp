@@ -55,7 +55,7 @@ std::string to_poliz(const std::string& regex){
     std::string processed_line;
     bool prev_terminal = false;  // попробуем расставить конкатенации таким способом
     for (char symbol : regex){
-        if ('a' <= symbol and symbol <= 'z'){
+        if (('a' <= symbol and symbol <= 'z') or symbol == '#'){
             processed_line += symbol;
             if (prev_terminal)
                 buffer.push('.');
@@ -92,10 +92,8 @@ Node * Node::build_tree(const std::string &s) {
     Node *new_node;
     Node *root = nullptr;
 
-
-
     for (char symbol: s){
-        if (('a' <= symbol and symbol <= 'z') or symbol == '0'){
+        if (('a' <= symbol and symbol <= 'z') or symbol == '0' or symbol == '#'){
             new_node = new Node(current_number, symbol);
             new_node->firstpos.insert(current_number);  // это - терминал
             new_node->lastpos.insert(current_number);
@@ -115,6 +113,7 @@ Node * Node::build_tree(const std::string &s) {
             new_node->nullable = true;
             new_node->firstpos = left->firstpos;
             new_node->lastpos = left->lastpos;
+
             buffer.push(new_node);
         }
 
@@ -173,12 +172,28 @@ Node * Node::build_tree(const std::string &s) {
 }
 
 
+// Печать дерева из интернета. Только для самопроверки
+void print_tree_structure(Node *bt, int spaces)
+{
+    if(bt != NULL)
+    {
+        print_tree_structure(bt->right, spaces + 5);
+        for(int i = 0; i < spaces; i++)
+            std::cout << ' ';
+        std::cout << "   " << bt->value << std::endl;
+        print_tree_structure(bt->left, spaces + 5);
+    }
+}
+
+
 int main(){
     std::string regex, processed;
     std::cin >> regex;
-    processed = to_poliz(regex);
+    processed = to_poliz('(' + regex + ")#");  // для совпадения с семинарами
     std::cout << processed << std::endl;
     Node n;
-    n.build_tree(processed);
+    Node *root;
+    root = n.build_tree(processed);
+    print_tree_structure(root, 0);
     return 0;
 }
