@@ -64,11 +64,13 @@ std::string to_poliz(const std::string& regex){
         if (symbol == '(' or symbol == '*' or symbol == '|') {
             if (symbol == '|' and not prev_terminal)  // eps. Пока только один случай
                 processed_line += '0';
+            if (symbol == '(' and prev_terminal)
+                buffer.push('.');
             buffer.push(symbol);
             prev_terminal = false;
         }
         if (symbol == ')') {
-            prev_terminal = false;
+            prev_terminal = true;
             while (buffer.top() != '(') {
                 processed_line += buffer.top();
                 buffer.pop();
@@ -89,20 +91,34 @@ Node * Node::build_tree(const std::string &s) {
     Node *left, *right;
     Node *new_node;
     Node *root = nullptr;
+
+
+
     for (char symbol: s){
         if (('a' <= symbol and symbol <= 'z') or symbol == '0'){
             new_node = new Node(current_number, symbol);
+            new_node->firstpos.insert(current_number);  // это - терминал
+            new_node->lastpos.insert(current_number);
+            if (symbol == '0')
+                new_node->nullable = true;
+            else
+                new_node->nullable = false;
             buffer.push(new_node);
             current_number++;
         }
+
         if (symbol == '*'){
             left = buffer.top();  // пусть в этом случае потомок будет слева
             buffer.pop();
             new_node = new Node(0, symbol);
             new_node->left = left;
+            new_node->nullable = true;
+            new_node->firstpos = left->firstpos;
+            new_node->lastpos = left->lastpos;
             buffer.push(new_node);
         }
-        if(symbol == '|' or symbol == '.'){
+
+        if (symbol == '|'){
             right = buffer.top();
             buffer.pop();
             left = buffer.top();
@@ -110,6 +126,44 @@ Node * Node::build_tree(const std::string &s) {
             new_node = new Node(0, symbol);
             new_node->right = right;
             new_node->left = left;
+
+            new_node->firstpos.insert(left->firstpos.begin(), left->firstpos.end());  // объединение списков
+            new_node->firstpos.insert(right->firstpos.begin(), right->firstpos.end());
+
+            new_node->lastpos.insert(left->lastpos.begin(), left->lastpos.end());
+            new_node->lastpos.insert(right->lastpos.begin(), right->lastpos.end());
+
+            if (left->nullable or right->nullable)
+                new_node->nullable = true;
+            else
+                new_node->nullable = false;
+
+            buffer.push(new_node);
+        }
+
+        if (symbol == '.'){
+            right = buffer.top();
+            buffer.pop();
+            left = buffer.top();
+            buffer.pop();
+            new_node = new Node(0, symbol);
+            new_node->right = right;
+            new_node->left = left;
+
+            new_node->firstpos.insert(left->firstpos.begin(), left->firstpos.end());  // левое есть всегда,
+            // но если оно обнуляется - то и правое
+            if (left->nullable)
+                new_node->firstpos.insert(right->firstpos.begin(), right->firstpos.end());
+
+            new_node->lastpos.insert(right->lastpos.begin(), right->lastpos.end());  // здесь наоборот
+            if (right->nullable)
+                new_node->lastpos.insert(left->lastpos.begin(), left->lastpos.end());
+
+            if (left->nullable and right->nullable)
+                new_node->nullable = true;
+            else
+                new_node->nullable = false;
+
             buffer.push(new_node);
         }
     }
