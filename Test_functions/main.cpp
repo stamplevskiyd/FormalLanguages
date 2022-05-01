@@ -1,6 +1,8 @@
 #include <iostream>
 #include <stack>
 #include <set>
+#include <cstring>
+#include <vector>
 
 enum Type {terminal, iteration, alternative, concatenation};
 
@@ -53,24 +55,60 @@ std::string to_poliz(const std::string& regex){
 
     std::stack<char> buffer;
     std::string processed_line;
-    bool prev_terminal = false;  // попробуем расставить конкатенации таким способом
+    std::string processed_regex;
+
+    // расставляем знаки конкатенации
     for (unsigned int i = 0; i < regex.size(); i++){
-        if (('a' <= regex[i] and regex[i] <= 'z') or regex[i] == '#'){
-            processed_line += regex[i];
-            if (prev_terminal)
-                buffer.push('.');
-            prev_terminal = true;
+        if (i == 0)
+            processed_regex += regex[i];
+        else{
+            if ('a' <= regex[i - 1] and regex[i - 1] <= 'z'){
+                if (('a' <= regex[i] and regex[i] <= 'z') or regex[i] == '('){
+                    processed_regex += '.';
+                    processed_regex += regex[i];
+                }
+                else
+                    processed_regex += regex[i];
+            }
+
+            if (regex[i - 1] == '(') {
+                if (regex[i] == '|')
+                    processed_regex += '0';  // eps
+                processed_regex += regex[i];
+            }
+
+            if (regex[i - 1] == '*') {
+                if (regex[i] == '|' or regex[i] == ')')
+                    processed_regex += regex[i];
+                else{
+                    processed_regex += '.';
+                    processed_regex += regex[i];
+                }
+            }
+
+            if (regex[i - 1] == '|') {
+                processed_regex += regex[i];
+            }
+            if (regex[i - 1] == ')') {
+                if (regex[i] == '|' or regex[i] == ')' or regex[i] == '*')
+                    processed_regex += regex[i];
+                else {
+                    processed_regex += '.';
+                    processed_regex += regex[i];
+                }
+            }
         }
-        if (regex[i] == '(' or symbol == '*' or symbol == '|') {
-            if (symbol == '|' and not prev_terminal)  // eps. Пока только один случай
-                processed_line += '0';
-            if (symbol == '(' and prev_terminal)
-                buffer.push('.');
+    }
+    std::cout << processed_regex << std::endl;
+
+    for (char symbol : processed_regex){
+        if (('a' <= symbol and symbol <= 'z') or symbol == '#' or symbol == '0'){
+            processed_line += symbol;
+        }
+        if (symbol == '(' or symbol == '*' or symbol == '|' or symbol == '.') {
             buffer.push(symbol);
-            prev_terminal = false;
         }
         if (symbol == ')') {
-            prev_terminal = true;
             while (buffer.top() != '(') {
                 processed_line += buffer.top();
                 buffer.pop();
@@ -87,7 +125,7 @@ std::string to_poliz(const std::string& regex){
 
 Node * Node::build_tree(const std::string &s) {
     std::stack<Node*> buffer;
-    unsigned int current_number = 0;
+    unsigned int current_number = 0;  // номер терминала, который сейчас будем обрабатывать
     Node *left, *right;
     Node *new_node;
     Node *root = nullptr;
@@ -95,8 +133,10 @@ Node * Node::build_tree(const std::string &s) {
     for (char symbol: s){
         if (('a' <= symbol and symbol <= 'z') or symbol == '0' or symbol == '#'){
             new_node = new Node(current_number, symbol);
-            new_node->firstpos.insert(current_number);  // это - терминал
-            new_node->lastpos.insert(current_number);
+            if (symbol != '0') {  // eps в first/lastpos не идет
+                new_node->firstpos.insert(current_number);  // это - терминал
+                new_node->lastpos.insert(current_number);
+            }
             if (symbol == '0')
                 new_node->nullable = true;
             else
@@ -167,7 +207,6 @@ Node * Node::build_tree(const std::string &s) {
         }
     }
     root = buffer.top();
-    std::cout << current_number << std::endl;
     return root;
 }
 
@@ -185,6 +224,36 @@ void print_tree_structure(Node *bt, int spaces)
     }
 }
 
+void fill_table(Node *root, std::vector<std::set<unsigned int>> *table){
+
+    // заполнить часть таблицы на основе одной вершины
+    if (root->left)
+        fill_table(root->left, table);
+    if (root->right)
+        fill_table(root->right, table);
+    if (root->value == '.'){
+        for (auto left_last: root->left->lastpos) {
+            (*table)[left_last].insert(root->right->firstpos.begin(), root->right->firstpos.end());
+        }
+    }
+    if (root->value == '*'){
+        for (auto left_last: root->left->lastpos) {
+            (*table)[left_last].insert(root->left->firstpos.begin(), root->left->firstpos.end());
+        }
+    }
+}
+
+std::vector<std::set<unsigned int>> followpos(Node *root){
+    // считает followpos для заданного дерева и строит табличку
+    std::vector<std::set<unsigned int>> followpos_table;
+    unsigned int number;
+    number = root->right->number;  // там #, а это всегда последний номер
+    for (unsigned int i = 0; i < number; i++)
+        followpos_table.emplace_back();  // записать в конец пустое множество
+    fill_table(root, &followpos_table);
+    return followpos_table;
+}
+
 
 int main(){
     std::string regex, processed;
@@ -194,6 +263,18 @@ int main(){
     Node n;
     Node *root;
     root = n.build_tree(processed);
+    std::vector<std::set<unsigned int>> table;
+    table = followpos(root);
+    std::cout << "--------" << std::endl;
+    unsigned int i = 0;
+    for (auto row: table){
+        std::cout << '"' << i << "\" ";
+        for (auto number: row)
+            std::cout << number << ' ';
+        std::cout << '\n';
+        i++;
+    }
+    std::cout << "--------" << std::endl;
     print_tree_structure(root, 0);
     return 0;
 }
