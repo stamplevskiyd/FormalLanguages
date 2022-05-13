@@ -90,6 +90,8 @@ std::string to_poliz(const std::string& regex){
             }
 
             if (regex[i - 1] == '|') {
+                if (regex[i] == ')' or regex[i] == '|')
+                    processed_regex += '0';
                 processed_regex += regex[i];
             }
             if (regex[i - 1] == ')') {
