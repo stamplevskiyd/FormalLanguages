@@ -220,6 +220,8 @@ Node *Node::delete_tree(Node * root) {
         delete_tree(root->left);
     if (root->right)
         delete_tree(root->right);
+    root->left = nullptr;
+    root->right = nullptr;
     delete root;
     return nullptr;
 }
@@ -338,6 +340,7 @@ DFA re2dfa(const std::string &s) {
                 }
                 current_state.clear();
             }
+            found = false;
             // сформировали множество, в которое нужно перейти по этому символ
         }
         states[position_number].processed = true;
