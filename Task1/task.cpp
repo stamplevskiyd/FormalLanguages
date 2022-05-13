@@ -102,7 +102,6 @@ std::string to_poliz(const std::string& regex){
             }
         }
     }
-    std::cout << processed_regex << std::endl;
 
     for (char symbol : processed_regex){
         if (('a' <= symbol and symbol <= 'z') or symbol == '#' or symbol == '0' or symbol == '*'){
@@ -275,49 +274,61 @@ DFA re2dfa(const std::string &s) {
     std::vector<std::set<unsigned int>> table;
     table = followpos(root);
 	DFA res = DFA(Alphabet(s));
+    unsigned int last_num = table.size(); // номер символа конца последовательности
     std::vector<State> states; // набор уже записанных состояний
 
     // какой букве отвечают какие номера
     std::map<char, std::set<unsigned int>> relations;
     unsigned int number = 0;
-    for (auto letter: s){  // заполнение таблицы соответствия букв номерам
+    for (auto letter: poliz){  // заполнение таблицы соответствия букв номерам
         if ('a' <= letter and letter <= 'z') {
             relations[letter].insert(number);
             number++;
         }
+        if (letter == '0')
+            number++;
     }
 
     // Создание начального состояния. Сразу проврим, является ли оно конечным
-    if (table[0].find(table.size()) != table[0].end())
+    if (root->firstpos.find(last_num) !=root->firstpos.end())
         res.create_state("0", true);
     else
         res.create_state("0", false);
-    states.emplace_back( table[0]);  // запишем начальное состояние в список состояний
+    states.emplace_back( root->firstpos);  // запишем начальное состояние в список состояний
 
     std::set<unsigned int> current_numbers;
     std::set<unsigned int> current_state; // в какое состояние нужно будет перейти
     bool found = false;
-    for (auto letter: res.get_alphabet()){
-        current_numbers = relations[letter];  // какие номера соответствуют этой букве
-        for (auto num: current_numbers){
-            if (states[0].symbols.find(num) != states[0].symbols.end())  // если этот символ есть в followpos
-                // то добавляем его followpos в формируемое множество
-                current_state.insert(table[num].begin(), table[num].end());
-        }
-        for (int i = 0; i < states.size(); i++){
-            if (states[i] == State(current_state)) {
-                // такое состояние есть, переход в него
-                res.set_trans("0", letter, std::to_string(i));
-                found = false;
-                break;
+    unsigned int position_number = 0;
+
+    while (!states.back().processed) {
+        for (auto letter: res.get_alphabet()) {
+            current_numbers = relations[letter];  // какие номера соответствуют этой букве
+            for (auto num: current_numbers) {
+                if (states[position_number].symbols.find(num) != states[position_number].symbols.end())  // если этот символ есть в followpos
+                    // то добавляем его followpos в формируемое множество
+                    current_state.insert(table[num].begin(), table[num].end());
             }
+            if (!current_state.empty()) {
+                for (int i = 0; i < states.size(); i++) {
+                    if (states[i] == State(current_state)) {
+                        // такое состояние есть, переход в него
+                        res.set_trans(std::to_string(position_number), letter, std::to_string(i));
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {  // такого состояния нет, создаем новое
+                    states.emplace_back(current_state);
+                    res.create_state(std::to_string(states.size() - 1), current_state.find(last_num) != current_state.end());
+                    res.set_trans(std::to_string(position_number), letter, std::to_string(states.size() - 1));
+                }
+                current_state.clear();
+            }
+            // сформировали множество, в которое нужно перейти по этому символ
         }
-        if (!found){  // такого состояния нет, создаем новое
-            states.emplace_back(current_state);
-            res.set_trans("0", letter, std::to_string(states.size() - 1));
-        }
-        // сформировали множество, в которое нужно перейти по этому символу
-        states[0].processed = true;
+        states[position_number].processed = true;
+        position_number++;
     }
 	return res;
 }
