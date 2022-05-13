@@ -347,7 +347,7 @@ DFA re2dfa(const std::string &s) {
             // сформировали множество, в которое нужно перейти по этому символ
         }
         position_number++;
-        if (!changed)
+        if (!changed and position_number == states.size())
             break;
     }
     res.set_initial("0");
