@@ -257,30 +257,30 @@ std::vector<std::set<unsigned int>> followpos(Node *root){
     return followpos_table;
 }
 
-struct State{
-    std::set<unsigned int> symbols;
-    bool processed;
-    State();
-    State(std::set <unsigned int>symbols);
-    bool operator== (const State& new_state);
-};
-
-State::State() {
-    symbols = {};
-    processed = false;
+std::string set_to_str(std::set<unsigned int> v){
+    std::string line;
+    for (auto num: v){
+        line += std::to_string(num);
+        line += ' ';
+    }
+    return line;
 }
 
-State::State(std::set <unsigned int> syms) {
-    symbols = syms;
-    processed = false;
+bool find_number_in_str(std::string s, unsigned int i){
+    if (s.empty())
+        return false;
+    std::string number;
+    std::set <unsigned int> arr;
+    for (auto letter: s){
+        if (letter == ' '){
+            arr.insert(std::stoi(number));
+            number.clear();
+        }
+        else
+            number += letter;
+    }
+    return (arr.find(i) != arr.end());
 }
-
-bool State::operator== (const State& new_state) {  // равенство состояний - по набору символов
-    if (this->symbols == new_state.symbols)
-        return true;
-    return false;
-}
-
 
 DFA re2dfa(const std::string &s) {
     std::string poliz = to_poliz('(' + s + ")#");
@@ -289,7 +289,7 @@ DFA re2dfa(const std::string &s) {
     table = followpos(root);
 	DFA res = DFA(Alphabet(s));
     unsigned int last_num = table.size(); // номер символа конца последовательности
-    std::vector<State> states; // набор уже записанных состояний
+    std::vector<std::string> states; // набор уже записанных состояний
 
     // какой букве отвечают какие номера
     std::map<char, std::set<unsigned int>> relations;
@@ -308,43 +308,47 @@ DFA re2dfa(const std::string &s) {
         res.create_state("0", true);
     else
         res.create_state("0", false);
-    states.emplace_back( root->firstpos);  // запишем начальное состояние в список состояний
+    states.emplace_back(set_to_str(root->firstpos));  // запишем начальное состояние в список состояний
     Node::delete_tree(root);
 
     std::set<unsigned int> current_numbers;
     std::set<unsigned int> current_state; // в какое состояние нужно будет перейти
     bool found = false;
     unsigned int position_number = 0;
+    bool changed = false; // поменялось ли что-нибудь за этот шаг
 
-    while (!states.back().processed) {
+    while (true) {
+        changed = false; // Добавление новых состояний
         for (auto letter: res.get_alphabet()) {
             current_numbers = relations[letter];  // какие номера соответствуют этой букве
             for (auto num: current_numbers) {
-                if (states[position_number].symbols.find(num) != states[position_number].symbols.end())  // если этот символ есть в followpos
+                if (find_number_in_str(states[position_number], num))  // если этот символ есть в followpos
                     // то добавляем его followpos в формируемое множество
                     current_state.insert(table[num].begin(), table[num].end());
             }
             if (!current_state.empty()) {
                 for (int i = 0; i < states.size(); i++) {
-                    if (states[i] == State(current_state)) {
+                    if (states[i] == set_to_str(current_state)) {
                         // такое состояние есть, переход в него
-                        res.set_trans(std::to_string(position_number), letter, std::to_string(i));
+                        res.set_trans(states[position_number], letter, states[i]);
                         found = true;
                         break;
                     }
                 }
                 if (!found) {  // такого состояния нет, создаем новое
-                    states.emplace_back(current_state);
-                    res.create_state(std::to_string(states.size() - 1), current_state.find(last_num) != current_state.end());
-                    res.set_trans(std::to_string(position_number), letter, std::to_string(states.size() - 1));
+                    states.emplace_back(set_to_str(current_state));
+                    res.create_state(set_to_str(current_state), current_state.find(last_num) != current_state.end());
+                    res.set_trans(states[position_number], letter, states.back());
+                    changed = true;
                 }
                 current_state.clear();
             }
             found = false;
             // сформировали множество, в которое нужно перейти по этому символ
         }
-        states[position_number].processed = true;
         position_number++;
+        if (!changed)
+            break;
     }
     res.set_initial("0");
 	return res;
