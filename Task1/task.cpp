@@ -305,9 +305,9 @@ DFA re2dfa(const std::string &s) {
 
     // Создание начального состояния. Сразу проврим, является ли оно конечным
     if (root->firstpos.find(last_num) !=root->firstpos.end())
-        res.create_state("0", true);
+        res.create_state(set_to_str(root->firstpos), true);
     else
-        res.create_state("0", false);
+        res.create_state(set_to_str(root->firstpos), false);
     states.emplace_back(set_to_str(root->firstpos));  // запишем начальное состояние в список состояний
     Node::delete_tree(root);
 
