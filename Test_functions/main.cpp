@@ -102,10 +102,10 @@ std::string to_poliz(const std::string& regex){
     std::cout << processed_regex << std::endl;
 
     for (char symbol : processed_regex){
-        if (('a' <= symbol and symbol <= 'z') or symbol == '#' or symbol == '0'){
+        if (('a' <= symbol and symbol <= 'z') or symbol == '#' or symbol == '0' or symbol == '*'){
             processed_line += symbol;
         }
-        if (symbol == '(' or symbol == '*' or symbol == '|' or symbol == '.') {
+        if (symbol == '('  or symbol == '|' or symbol == '.') {
             buffer.push(symbol);
         }
         if (symbol == ')') {
