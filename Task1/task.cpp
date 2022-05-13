@@ -21,6 +21,7 @@ struct Node{
     Node(unsigned int n, char v);
     Type get_type(char v);
     static Node * build_tree(const std::string &s);
+    static Node * delete_tree(Node * root);
 };
 
 Node::Node() {
@@ -214,6 +215,15 @@ Node * Node::build_tree(const std::string &s) {
     return root;
 }
 
+Node *Node::delete_tree(Node * root) {
+    if (root->left)
+        delete_tree(root->left);
+    if (root->right)
+        delete_tree(root->right);
+    delete root;
+    return nullptr;
+}
+
 
 void fill_table(Node *root, std::vector<std::set<unsigned int>> *table){
 
@@ -297,6 +307,7 @@ DFA re2dfa(const std::string &s) {
     else
         res.create_state("0", false);
     states.emplace_back( root->firstpos);  // запишем начальное состояние в список состояний
+    Node::delete_tree(root);
 
     std::set<unsigned int> current_numbers;
     std::set<unsigned int> current_state; // в какое состояние нужно будет перейти
@@ -332,5 +343,6 @@ DFA re2dfa(const std::string &s) {
         states[position_number].processed = true;
         position_number++;
     }
+    res.set_initial("0");
 	return res;
 }

@@ -1,6 +1,8 @@
 file(REMOVE_RECURSE
   "CMakeFiles/re2dfa.dir/main.cpp.o"
+  "CMakeFiles/re2dfa.dir/main.cpp.o.d"
   "CMakeFiles/re2dfa.dir/task.cpp.o"
+  "CMakeFiles/re2dfa.dir/task.cpp.o.d"
   "re2dfa"
   "re2dfa.pdb"
 )
