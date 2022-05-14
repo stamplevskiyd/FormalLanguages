@@ -3,14 +3,10 @@
 #include <iostream>
 #include <stack>
 #include <set>
-#include <cstring>
 #include <vector>
 #include <map>
 
-enum Type {terminal, iteration, alternative, concatenation};
-
 struct Node{
-    Type type;
     unsigned int number;
     char value;
     Node *left, *right;  // потомки вершины
@@ -19,13 +15,11 @@ struct Node{
     std::set <unsigned int> lastpos;
     Node();
     Node(unsigned int n, char v);
-    Type get_type(char v);
-    static Node * build_tree(const std::string &s);
+    static Node * build_tree(const std::string &s, Alphabet alpha);
     static Node * delete_tree(Node * root);
 };
 
 Node::Node() {
-    type = terminal;
     number = 0;
     left = nullptr;
     right = nullptr;
@@ -38,22 +32,13 @@ Node::Node() {
 Node::Node(unsigned int n, char v) {
     number = n;
     value = v;
-    type = get_type(v);
     left = nullptr;
     right = nullptr;
+    nullable = true;
 }
 
-Type Node::get_type(char v) {
-    if (v == '*')
-        return iteration;
-    if (v == '|')
-        return alternative;
-    if (v == '.')
-        return concatenation;
-    return terminal;  // пока непонятно, что делать с конкатенацией
-}
 
-std::string to_poliz(const std::string& regex){
+std::string to_poliz(const std::string& regex, Alphabet alpha){
 
     // строит ПОЛИЗ, добавляет 0 в качестве eps
 
@@ -66,9 +51,9 @@ std::string to_poliz(const std::string& regex){
         if (i == 0)
             processed_regex += regex[i];
         else{
-            if ('a' <= regex[i - 1] and regex[i - 1] <= 'z'){
-                if (('a' <= regex[i] and regex[i] <= 'z') or regex[i] == '('){
-                    processed_regex += '.';
+            if (alpha.has_char(regex[i - 1])){
+                if (alpha.has_char(regex[i]) or regex[i] == '('){
+                    processed_regex += char(1230);
                     processed_regex += regex[i];
                 }
                 else
@@ -76,8 +61,8 @@ std::string to_poliz(const std::string& regex){
             }
 
             if (regex[i - 1] == '(') {
-                if (regex[i] == '|')
-                    processed_regex += '0';  // eps
+                if (regex[i] == '|' or regex[i] == ')')
+                    processed_regex += char(1234);  // eps
                 processed_regex += regex[i];
             }
 
@@ -85,32 +70,46 @@ std::string to_poliz(const std::string& regex){
                 if (regex[i] == '|' or regex[i] == ')')
                     processed_regex += regex[i];
                 else{
-                    processed_regex += '.';
+                    processed_regex += char(1230);
                     processed_regex += regex[i];
                 }
             }
 
             if (regex[i - 1] == '|') {
-                if (regex[i] == ')' or regex[i] == '|')
-                    processed_regex += '0';
+                if (regex[i] == ')' or regex[i] == '|' or regex[i] == '*')
+                    processed_regex += char(1234);
                 processed_regex += regex[i];
             }
             if (regex[i - 1] == ')') {
                 if (regex[i] == '|' or regex[i] == ')' or regex[i] == '*')
                     processed_regex += regex[i];
                 else {
-                    processed_regex += '.';
+                    processed_regex += char(1230);
                     processed_regex += regex[i];
                 }
             }
         }
     }
+    std::cout << processed_regex << std::endl;
 
     for (char symbol : processed_regex){
-        if (('a' <= symbol and symbol <= 'z') or symbol == '#' or symbol == '0' or symbol == '*'){
+        if (alpha.has_char(symbol) or symbol == '#' or symbol == char(1234)){
             processed_line += symbol;
         }
-        if (symbol == '('  or symbol == '|' or symbol == '.') {
+        if (symbol == '(') {
+            buffer.push(symbol);
+        }
+        if (symbol == '*'){
+            processed_line += symbol;
+        }
+        if (symbol == char(1230)){
+            buffer.push(symbol);
+        }
+        if (symbol == '|'){
+            while (buffer.top() == char(1230)){
+                processed_line += buffer.top();
+                buffer.pop();
+            }
             buffer.push(symbol);
         }
         if (symbol == ')') {
@@ -128,21 +127,21 @@ std::string to_poliz(const std::string& regex){
     return processed_line;
 }
 
-Node * Node::build_tree(const std::string &s) {
+Node * Node::build_tree(const std::string &s, Alphabet alpha) {
     std::stack<Node*> buffer;
     unsigned int current_number = 0;  // номер терминала, который сейчас будем обрабатывать
     Node *left, *right;
     Node *new_node;
-    Node *root = nullptr;
+    Node *root;
 
     for (char symbol: s){
-        if (('a' <= symbol and symbol <= 'z') or symbol == '0' or symbol == '#'){
+        if (alpha.has_char(symbol) or symbol == char(1234) or symbol == '#'){
             new_node = new Node(current_number, symbol);
-            if (symbol != '0') {  // eps в first/lastpos не идет
+            if (symbol != char(1234)) {  // eps в first/lastpos не идет
                 new_node->firstpos.insert(current_number);  // это - терминал
                 new_node->lastpos.insert(current_number);
             }
-            if (symbol == '0')
+            if (symbol == char(1234))
                 new_node->nullable = true;
             else
                 new_node->nullable = false;
@@ -185,7 +184,7 @@ Node * Node::build_tree(const std::string &s) {
             buffer.push(new_node);
         }
 
-        if (symbol == '.'){
+        if (symbol == char(1230)){
             right = buffer.top();
             buffer.pop();
             left = buffer.top();
@@ -234,7 +233,7 @@ void fill_table(Node *root, std::vector<std::set<unsigned int>> *table){
         fill_table(root->left, table);
     if (root->right)
         fill_table(root->right, table);
-    if (root->value == '.'){
+    if (root->value == char(1230)){
         for (auto left_last: root->left->lastpos) {
             (*table)[left_last].insert(root->right->firstpos.begin(), root->right->firstpos.end());
         }
@@ -257,7 +256,7 @@ std::vector<std::set<unsigned int>> followpos(Node *root){
     return followpos_table;
 }
 
-std::string set_to_str(std::set<unsigned int> v){
+std::string set_to_str(const std::set<unsigned int>& v){
     std::string line;
     for (auto num: v){
         line += std::to_string(num);
@@ -266,7 +265,7 @@ std::string set_to_str(std::set<unsigned int> v){
     return line;
 }
 
-bool find_number_in_str(std::string s, unsigned int i){
+bool find_number_in_str(const std::string& s, unsigned int i){
     if (s.empty())
         return false;
     std::string number;
@@ -283,11 +282,11 @@ bool find_number_in_str(std::string s, unsigned int i){
 }
 
 DFA re2dfa(const std::string &s) {
-    std::string poliz = to_poliz('(' + s + ")#");
-    Node *root = Node::build_tree(poliz);
+    DFA res = DFA(Alphabet(s));
+    std::string poliz = to_poliz('(' + s + ")#", res.get_alphabet());
+    Node *root = Node::build_tree(poliz, res.get_alphabet());
     std::vector<std::set<unsigned int>> table;
     table = followpos(root);
-	DFA res = DFA(Alphabet(s));
     unsigned int last_num = table.size(); // номер символа конца последовательности
     std::vector<std::string> states; // набор уже записанных состояний
 
@@ -295,11 +294,11 @@ DFA re2dfa(const std::string &s) {
     std::map<char, std::set<unsigned int>> relations;
     unsigned int number = 0;
     for (auto letter: poliz){  // заполнение таблицы соответствия букв номерам
-        if ('a' <= letter and letter <= 'z') {
+        if (res.get_alphabet().has_char(letter)) {
             relations[letter].insert(number);
             number++;
         }
-        if (letter == '0')
+        if (letter == char(1234))
             number++;
     }
 
@@ -351,5 +350,5 @@ DFA re2dfa(const std::string &s) {
             break;
     }
     res.set_initial("0");
-	return res;
+    return res;
 }
