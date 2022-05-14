@@ -1,7 +1,0 @@
-/home/dmitry/Documents/FormalLanguages/Task1/cmake-build-debug/CMakeFiles/re2dfa.dir
-/home/dmitry/Documents/FormalLanguages/Task1/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/dmitry/Documents/FormalLanguages/Task1/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/dmitry/Documents/FormalLanguages/Task1/cmake-build-debug/CMakeFiles/list_install_components.dir
-/home/dmitry/Documents/FormalLanguages/Task1/cmake-build-debug/CMakeFiles/install.dir
-/home/dmitry/Documents/FormalLanguages/Task1/cmake-build-debug/CMakeFiles/install/local.dir
-/home/dmitry/Documents/FormalLanguages/Task1/cmake-build-debug/CMakeFiles/install/strip.dir

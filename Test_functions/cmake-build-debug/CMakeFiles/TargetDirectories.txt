@@ -1,3 +1,0 @@
-/home/dmitry/Documents/FormalLanguages/Test_functions/cmake-build-debug/CMakeFiles/Test_functions.dir
-/home/dmitry/Documents/FormalLanguages/Test_functions/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/dmitry/Documents/FormalLanguages/Test_functions/cmake-build-debug/CMakeFiles/rebuild_cache.dir
